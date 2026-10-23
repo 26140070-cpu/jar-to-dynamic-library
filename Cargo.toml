@@ -1,0 +1,59 @@
+[package]
+name = "jartodynamiclibrary"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Pack a Forge/NeoForge/Fabric mod .jar into a dynamic library (.dll/.so/.dylib) that loads it into a running Minecraft JVM"
+license = "GPL-3.0-only"
+homepage = "https://crates.io/crates/jartodynamiclibrary"
+readme = "README.md"
+exclude = [
+  "/docs/",
+  "/dist/",
+  "/tests/",
+  "/input.jar.test",
+  "/rustfmt.toml",
+]
+
+[lib]
+name = "jar_to_dynamic_library"
+crate-type = ["cdylib"]
+
+[[bin]]
+name = "jar-to-dynamic-library-gui"
+path = "src/bin/gui.rs"
+required-features = ["gui"]
+
+[dependencies]
+glacex = { version = "0.2.2", optional = true }
+jni = "0.21"
+rfd = { version = "0.15", optional = true, default-features = false, features = ["async-std", "xdg-portal"] }
+
+[target.'cfg(windows)'.dependencies.windows-sys]
+version = "0.59"
+features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_System_LibraryLoader",
+  "Win32_System_SystemServices",
+    "Win32_System_Threading",
+]
+
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.62"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[build-dependencies]
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+[features]
+gui = ["dep:glacex", "dep:rfd"]

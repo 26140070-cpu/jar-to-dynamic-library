@@ -1,0 +1,98 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            library: jar_to_dynamic_library.dll
+          - name: linux-x64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            library: libjar_to_dynamic_library.so
+          - name: macos-arm64
+            os: macos-latest
+            target: aarch64-apple-darwin
+            library: libjar_to_dynamic_library.dylib
+          - name: macos-x64
+            os: macos-latest
+            target: x86_64-apple-darwin
+            library: libjar_to_dynamic_library.dylib
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install Rust target
+        shell: bash
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Use the test jar if there is no input.jar
+        shell: bash
+        run: |
+          if [ ! -f input.jar ]; then
+            echo "::warning file=input.jar::No input.jar presented, so using input.jar.test"
+            cp input.jar.test input.jar
+          fi
+
+      - name: Build
+        shell: bash
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Upload the library as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jar-to-dynamic-library-${{ matrix.name }}
+          path: target/${{ matrix.target }}/release/${{ matrix.library }}
+          if-no-files-found: error
+
+  e2e:
+    name: e2e (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Run end-to-end test
+        run: tests/e2e/run.sh
+
+  lint:
+    name: fmt + clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Use the test jar
+        run: cp input.jar.test input.jar
+      - run: rustup component add rustfmt clippy
+      - run: cargo fmt --check
+      - run: cargo clippy --release --locked -- -D warnings
