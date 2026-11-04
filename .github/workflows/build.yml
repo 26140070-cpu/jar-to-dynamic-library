@@ -77,8 +77,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+      - name: Test Forge and NeoForge early-startup adapters
+        run: bash tests/adapter-agent/run.sh
       - name: Run end-to-end test
-        run: tests/e2e/run.sh
+        run: bash tests/e2e/run.sh
 
   lint:
     name: fmt + clippy
@@ -96,3 +98,4 @@ jobs:
       - run: rustup component add rustfmt clippy
       - run: cargo fmt --check
       - run: cargo clippy --release --locked -- -D warnings
+      - run: cargo test --locked

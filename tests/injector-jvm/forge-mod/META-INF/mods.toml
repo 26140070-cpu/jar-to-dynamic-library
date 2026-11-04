@@ -1,0 +1,9 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="exampleforge"
+version="1.0.0"
+displayName="Example Forge Mod"
+description="Fixture used by tests/injector-jvm/run.sh."

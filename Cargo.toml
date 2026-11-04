@@ -1,14 +1,13 @@
 [package]
 name = "jartodynamiclibrary"
-version = "0.1.0"
+version = "0.2.1"
 edition = "2021"
-rust-version = "1.75"
-description = "Pack a Forge/NeoForge/Fabric mod .jar into a dynamic library (.dll/.so/.dylib) that loads it into a running Minecraft JVM"
+rust-version = "1.76"
+description = "Minecraft mod injector for already-running JVMs through the JDK Attach API, with JAR auditing and a build/inject GUI"
 license = "GPL-3.0-only"
 homepage = "https://crates.io/crates/jartodynamiclibrary"
 readme = "README.md"
 exclude = [
-  "/docs/",
   "/dist/",
   "/tests/",
   "/input.jar.test",
@@ -17,7 +16,7 @@ exclude = [
 
 [lib]
 name = "jar_to_dynamic_library"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [[bin]]
 name = "jar-to-dynamic-library-gui"
@@ -25,9 +24,21 @@ path = "src/bin/gui.rs"
 required-features = ["gui"]
 
 [dependencies]
-glacex = { version = "0.2.2", optional = true }
+eframe = { version = "0.29", optional = true, default-features = false, features = [
+  "accesskit",
+  "default_fonts",
+  "glow",
+  "persistence",
+] }
+egui = { version = "0.29", optional = true }
+image = { version = "0.25", optional = true, default-features = false, features = ["gif", "jpeg", "png"] }
 jni = "0.21"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 rfd = { version = "0.15", optional = true, default-features = false, features = ["async-std", "xdg-portal"] }
+ureq = { version = "2.12", optional = true }
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 version = "0.59"
@@ -54,6 +65,7 @@ panic = "abort"
 
 [build-dependencies]
 zip = { version = "2", default-features = false, features = ["deflate"] }
+embed-resource = "3.0.9"
 
 [features]
-gui = ["dep:glacex", "dep:rfd"]
+gui = ["dep:eframe", "dep:egui", "dep:image", "dep:rfd", "dep:ureq"]

@@ -72,7 +72,7 @@ Choose **Upload files**.
 
 ![Upload files](images/upload-3.png)
 
-Upload your mod `.jar` file. You do not need to rename it to `input.jar`.
+Upload your mod `.jar` file and name it `input.jar` so the workflow picks it up.
 
 ![Choose your JAR file](images/upload-4.png)
 

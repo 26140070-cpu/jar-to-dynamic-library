@@ -15,6 +15,18 @@ public class ForgeInjector extends Thread {
 
     private static native Class defineClass0(ClassLoader loader, byte[] data, ProtectionDomain protectionDomain);
 
+    private static Object instantiatePublicNoArg(Class type) throws Exception {
+        try {
+            return type.getConstructor().newInstance();
+        } catch (NoSuchMethodException e) {
+            throw new Exception("Unsupported entrypoint " + type.getName()
+                    + ": a public no-argument constructor is required by this injector.", e);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause() == null ? e : e.getCause();
+            throw new Exception("Constructor for " + type.getName() + " threw an exception.", cause);
+        }
+    }
+
     private static String duplicateClassName(String message) {
         if (message == null) {
             return null;
@@ -99,14 +111,12 @@ public class ForgeInjector extends Thread {
                 "net.minecraftforge.fml.common.Mod",
                 "net.neoforged.fml.common.Mod");
         Class forgeEventHandlerAnnotation = null;
-        Class fmlInitializationEventClass = null;
-        Class fmlPreInitializationEventClass = null;
         try {
-            forgeEventHandlerAnnotation = tryGetClass(writer, cl, "cpw.mods.fml.common.Mod$EventHandler", "net.minecraftforge.fml.common.Mod$EventHandler");
-            fmlPreInitializationEventClass = tryGetClass(writer, cl, "cpw.mods.fml.common.event.FMLPreInitializationEvent", "net.minecraftforge.fml.common.event.FMLPreInitializationEvent");
-            fmlInitializationEventClass = tryGetClass(writer, cl, "cpw.mods.fml.common.event.FMLInitializationEvent", "net.minecraftforge.fml.common.event.FMLInitializationEvent");
-        } catch (Exception e) {
-            writer.println("Event handler annotations not found (expected on NeoForge / modern FML)");
+            forgeEventHandlerAnnotation = tryGetClass(writer, cl,
+                    "cpw.mods.fml.common.Mod$EventHandler",
+                    "net.minecraftforge.fml.common.Mod$EventHandler");
+        } catch (ClassNotFoundException e) {
+            writer.println("Legacy @EventHandler annotation not found; using constructor-only initialization");
         }
 
         ArrayList mods = new ArrayList();
@@ -115,93 +125,40 @@ public class ForgeInjector extends Thread {
             if (tClass.getAnnotation(modAnnotation) == null) {
                 continue;
             }
-            Object[] mod = new Object[3];
-            mod[0] = tClass;
-            ArrayList fmlPreInitMethods = new ArrayList();
-            ArrayList fmlInitMethods = new ArrayList();
+            ArrayList eventHandlers = new ArrayList();
             if (forgeEventHandlerAnnotation != null) {
                 Method[] methods = tClass.getDeclaredMethods();
                 for (int m = 0; m < methods.length; m++) {
                     Method method = methods[m];
-                    if (method.getAnnotation(forgeEventHandlerAnnotation) != null && method.getParameterCount() == 1) {
-                        Class[] pts = method.getParameterTypes();
-                        if (pts[0] == fmlInitializationEventClass) {
-                            method.setAccessible(true);
-                            fmlInitMethods.add(method);
-                        }
-                        if (pts[0] == fmlPreInitializationEventClass) {
-                            method.setAccessible(true);
-                            fmlPreInitMethods.add(method);
-                        }
+                    if (method.getAnnotation(forgeEventHandlerAnnotation) != null) {
+                        eventHandlers.add(method);
                     }
                 }
             }
-            mod[1] = fmlPreInitMethods;
-            mod[2] = fmlInitMethods;
+            Object[] mod = new Object[2];
+            mod[0] = tClass;
+            mod[1] = eventHandlers;
             mods.add(mod);
+        }
+
+        if (mods.isEmpty()) {
+            throw new Exception("No @Mod classes were found in the embedded JAR. Check the loader version and mod metadata.");
         }
 
         for (int i = 0; i < mods.size(); i++) {
             Object[] mod = (Object[]) mods.get(i);
             Class modClass = (Class) mod[0];
-            ArrayList fmlPreInitMethods = (ArrayList) mod[1];
-            ArrayList fmlInitMethods = (ArrayList) mod[2];
-            Object modInstance = null;
-
-            try {
-                writer.println("Instancing " + modClass.getName());
-                writer.flush();
-                modInstance = modClass.newInstance();
-                writer.println("Instanced");
-                writer.flush();
-            } catch (Exception e) {
-                writer.println("Genexeption on instancing: " + e);
-                e.printStackTrace(writer);
-                writer.flush();
-                throw new Exception("Exception on instancing", e);
+            ArrayList eventHandlers = (ArrayList) mod[1];
+            if (!eventHandlers.isEmpty()) {
+                throw new Exception("Unsupported Forge lifecycle for " + modClass.getName()
+                        + ": @EventHandler callbacks require real FML event objects. This injector runs after normal mod discovery and will not invoke event handlers with null arguments.");
             }
 
-            for (int p = 0; p < fmlPreInitMethods.size(); p++) {
-                Method preInitMethod = (Method) fmlPreInitMethods.get(p);
-                try {
-                    writer.println("Preiniting " + preInitMethod);
-                    writer.flush();
-                    writer.println("Preinited");
-                    writer.flush();
-                    preInitMethod.invoke(modInstance, new Object[]{null});
-                } catch (InvocationTargetException e) {
-                    writer.println("InvocationTargetException on preiniting: " + e);
-                    e.getCause().printStackTrace(writer);
-                    writer.flush();
-                    throw new Exception("Exception on preiniting (InvocationTargetException)", e.getCause());
-                } catch (Exception e) {
-                    writer.println("Genexeption on preiniting: " + e);
-                    e.printStackTrace(writer);
-                    writer.flush();
-                    throw new Exception("Exception on preiniting", e);
-                }
-            }
-
-            for (int n = 0; n < fmlInitMethods.size(); n++) {
-                Method initMethod = (Method) fmlInitMethods.get(n);
-                try {
-                    writer.println("Initing " + initMethod);
-                    writer.flush();
-                    writer.println("Inited");
-                    writer.flush();
-                    initMethod.invoke(modInstance, new Object[]{null});
-                } catch (InvocationTargetException e) {
-                    writer.println("InvocationTargetException on initing: " + e);
-                    e.getCause().printStackTrace(writer);
-                    writer.flush();
-                    throw new Exception("Exception on initing (InvocationTargetException)", e.getCause());
-                } catch (Exception e) {
-                    writer.println("Genexeption on initing: " + e);
-                    e.printStackTrace(writer);
-                    writer.flush();
-                    throw new Exception("Exception on initing", e);
-                }
-            }
+            writer.println("Instancing " + modClass.getName());
+            writer.flush();
+            Object modInstance = instantiatePublicNoArg(modClass);
+            writer.println("Instanced " + modInstance.getClass().getName());
+            writer.flush();
         }
     }
 
@@ -252,21 +209,21 @@ public class ForgeInjector extends Thread {
             }
 
             if (modInitializer.isAssignableFrom(tClass)) {
-                Object inst = tClass.newInstance();
+                Object inst = instantiatePublicNoArg(tClass);
                 writer.println("Fabric main entrypoint: " + tClass.getName());
                 writer.flush();
                 onInitialize.invoke(inst);
                 mainCount++;
             }
             if (isClient && clientInitializer != null && clientInitializer.isAssignableFrom(tClass)) {
-                Object inst = tClass.newInstance();
+                Object inst = instantiatePublicNoArg(tClass);
                 writer.println("Fabric client entrypoint: " + tClass.getName());
                 writer.flush();
                 onInitializeClient.invoke(inst);
                 clientCount++;
             }
             if (isServer && serverInitializer != null && serverInitializer.isAssignableFrom(tClass)) {
-                Object inst = tClass.newInstance();
+                Object inst = instantiatePublicNoArg(tClass);
                 writer.println("Fabric server entrypoint: " + tClass.getName());
                 writer.flush();
                 onInitializeServer.invoke(inst);
@@ -281,6 +238,7 @@ public class ForgeInjector extends Thread {
             writer.println("  (classes must implement ModInitializer / ClientModInitializer / DedicatedServerModInitializer");
             writer.println("   and have a public no-arg constructor; fabric.mod.json is not consulted)");
             writer.flush();
+            throw new Exception("No compatible Fabric entrypoint class was found in the embedded JAR.");
         }
     }
 
@@ -355,7 +313,6 @@ public class ForgeInjector extends Thread {
                 e.printStackTrace(writer);
                 writer.flush();
             }
-            writer.close();
         } catch (Throwable e) {
             e.printStackTrace();
         }

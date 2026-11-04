@@ -6,7 +6,8 @@ public class Main {
     public static void main(String[] args) throws Exception {
         FakeLaunchClassLoader loader = new FakeLaunchClassLoader(Main.class.getClassLoader());
 
-        loader.define(Files.readAllBytes(Paths.get(args[1], "testmod", "Marker.class")));
+        Class<?> gameMarker = loader.define(Files.readAllBytes(Paths.get(args[1], "testmod", "Marker.class")));
+
         Thread fakeForge = new Thread(() -> {
             try { Thread.sleep(10_000); } catch (InterruptedException ignored) { }
         }, "fake-forge-thread");
@@ -26,17 +27,23 @@ public class Main {
         }
         String content = new String(Files.readAllBytes(marker.toPath()), "UTF-8").trim();
         System.out.println("marker: " + content);
-        if (!content.equals("hello-from-base|tag-from-marker")) {
+        String expected = "hello-from-base|tag-from-marker|" + System.identityHashCode(gameMarker);
+        if (!content.equals(expected)) {
+            System.out.println("FAIL: the mod did not reuse the class the game loader already had");
             System.exit(2);
         }
 
         File log = new File(System.getProperty("user.home"), "jar-to-dynamic-library-log.txt");
         String logText = new String(Files.readAllBytes(log.toPath()), "UTF-8");
-        if (!logText.contains("It is recommended to remove testmod/Marker.class")) {
-            System.out.println("FAIL: duplicate class was not handled");
+        if (!logText.contains("Game class loader: FakeLaunchClassLoader")) {
+            System.out.println("FAIL: the injector did not detect the game class loader");
             System.exit(3);
         }
-        System.out.println("duplicate class handled");
+        if (logText.contains("JTDL|error|")) {
+            System.out.println("FAIL: the injector reported an error");
+            System.exit(4);
+        }
+        System.out.println("the mod linked against the game's own Marker class");
         System.exit(0);
     }
 }
