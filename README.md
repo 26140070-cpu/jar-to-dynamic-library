@@ -5,6 +5,8 @@ build native libraries from a mod JAR, or try to load the original JAR into a
 running Java game. For the best compatibility, configure a mod to load when the
 game starts instead of injecting it after startup.
 
+![JAR to Dynamic Library demo](assets/images/demo.gif)
+
 ## Download and install the app
 
 Download the desktop package for your operating system from this project's
