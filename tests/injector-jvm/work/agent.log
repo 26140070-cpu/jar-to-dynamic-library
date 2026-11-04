@@ -1,0 +1,6 @@
+WARNING: A Java agent has been loaded dynamically (/home/donalp012/Descargas/jar-to-dynamic-library-2.0.0/target/release/build/jartodynamiclibrary-6f5bf74442eb8d5b/out/jtdl-agent.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+[JTDL] JTDL|warn|entrypoint|example.ExamplePreLaunch.onPreLaunch() was recognized but skipped: preLaunch runs before the game starts, and this JVM is already running. Restart the game to run it safely.
+game exiting

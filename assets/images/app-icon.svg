@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <path d="M157 44h137l67 67v128H157z" fill="#7157e8"/>
+    <path d="M294 44v68h67" fill="#a995ff"/>
+    <path d="M294 44v68h67" fill="none" stroke="#ded7ff" stroke-width="8"/>
+    <path d="M190 145h108" fill="none" stroke="#c9bcff" stroke-width="9" stroke-dasharray="3 18"/>
+    <text x="256" y="207" fill="#fff" font-family="sans-serif" font-size="40" font-weight="700" text-anchor="middle">JAR</text>
+    <path d="M256 257v29m-15-14 15 15 15-15" fill="none" stroke="#a995ff" stroke-width="10"/>
+    <g fill="#e1f5ee" stroke="#0f6e56" stroke-width="6">
+      <rect x="123" y="311" width="266" height="47" rx="14"/>
+      <rect x="123" y="374" width="266" height="47" rx="14"/>
+      <rect x="123" y="437" width="266" height="47" rx="14"/>
+    </g>
+    <g fill="#0f6e56" font-family="sans-serif" font-size="26" font-weight="700" text-anchor="middle">
+      <text x="256" y="342">.dll</text>
+      <text x="256" y="405">.so</text>
+      <text x="256" y="468">.dylib</text>
+    </g>
+  </g>
+</svg>

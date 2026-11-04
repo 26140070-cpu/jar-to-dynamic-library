@@ -1,0 +1,71 @@
+[package]
+name = "jartodynamiclibrary"
+version = "0.2.1"
+edition = "2021"
+rust-version = "1.76"
+description = "Minecraft mod injector for already-running JVMs through the JDK Attach API, with JAR auditing and a build/inject GUI"
+license = "GPL-3.0-only"
+homepage = "https://crates.io/crates/jartodynamiclibrary"
+readme = "README.md"
+exclude = [
+  "/dist/",
+  "/tests/",
+  "/input.jar.test",
+  "/rustfmt.toml",
+]
+
+[lib]
+name = "jar_to_dynamic_library"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "jar-to-dynamic-library-gui"
+path = "src/bin/gui.rs"
+required-features = ["gui"]
+
+[dependencies]
+eframe = { version = "0.29", optional = true, default-features = false, features = [
+  "accesskit",
+  "default_fonts",
+  "glow",
+  "persistence",
+] }
+egui = { version = "0.29", optional = true }
+image = { version = "0.25", optional = true, default-features = false, features = ["gif", "jpeg", "png"] }
+jni = "0.21"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+rfd = { version = "0.15", optional = true, default-features = false, features = ["async-std", "xdg-portal"] }
+ureq = { version = "2.12", optional = true }
+
+[target.'cfg(windows)'.dependencies.windows-sys]
+version = "0.59"
+features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_System_LibraryLoader",
+  "Win32_System_SystemServices",
+    "Win32_System_Threading",
+]
+
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.62"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[build-dependencies]
+zip = { version = "2", default-features = false, features = ["deflate"] }
+embed-resource = "3.0.9"
+
+[features]
+gui = ["dep:eframe", "dep:egui", "dep:image", "dep:rfd", "dep:ureq"]

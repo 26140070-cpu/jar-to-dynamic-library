@@ -1,0 +1,148 @@
+name: Desktop packages
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gui:
+    name: GUI (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-latest
+          - name: linux-x64
+            os: ubuntu-latest
+          - name: macos-arm64
+            os: macos-15
+          - name: macos-x64
+            os: macos-15-intel
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux GUI build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick libasound2-dev libegl1-mesa-dev libgl1-mesa-dev libwayland-dev libxkbcommon-dev libx11-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
+
+      - name: Install JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Use the test mod for the release build
+        shell: bash
+        run: cp input.jar.test input.jar
+
+      - name: Build the GUI
+        run: cargo build --release --locked --features gui --bin jar-to-dynamic-library-gui
+
+      - name: Bundle project sources
+        shell: bash
+        run: |
+          mkdir -p dist/project
+          cp Cargo.toml Cargo.lock build.rs dist/project/
+          cp -R .cargo assets build java src dist/project/
+
+      - name: Package Windows executable
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          cp target/release/jar-to-dynamic-library-gui.exe dist/jar-to-dynamic-library-windows-x64.exe
+
+      - name: Package Linux AppImage
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          mkdir -p dist AppDir/usr/bin/project AppDir/usr/share/applications
+          cp target/release/jar-to-dynamic-library-gui AppDir/usr/bin/jar-to-dynamic-library-gui
+          cp -R dist/project/. AppDir/usr/bin/project/
+          cp assets/images/app-icon.png dist/jar-to-dynamic-library-icon.png
+          cp assets/images/app-icon.png AppDir/jar-to-dynamic-library-gui.png
+          for size in 16 24 32 48 64 128 256 512; do
+            mkdir -p "AppDir/usr/share/icons/hicolor/${size}x${size}/apps"
+            convert assets/images/app-icon.png -resize "${size}x${size}" \
+              "AppDir/usr/share/icons/hicolor/${size}x${size}/apps/jar-to-dynamic-library-gui.png"
+          done
+          cat > AppDir/usr/share/applications/jar-to-dynamic-library-gui.desktop <<'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=JAR to Dynamic Library
+          Exec=jar-to-dynamic-library-gui
+          Icon=jar-to-dynamic-library-gui
+          StartupWMClass=jar-to-dynamic-library-gui
+          Categories=Utility;
+          Terminal=false
+          EOF
+          cp AppDir/usr/share/applications/jar-to-dynamic-library-gui.desktop AppDir/
+          cp scripts/install-linux-desktop.sh dist/
+          curl -fsSL -o linuxdeploy.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          curl -fsSL -o appimagetool.AppImage https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x linuxdeploy.AppImage appimagetool.AppImage
+          ./linuxdeploy.AppImage --appimage-extract-and-run --appdir AppDir \
+            --executable target/release/jar-to-dynamic-library-gui \
+            --desktop-file AppDir/usr/share/applications/jar-to-dynamic-library-gui.desktop \
+            --icon-file AppDir/jar-to-dynamic-library-gui.png
+          APPIMAGE_EXTRACT_AND_RUN=1 ./appimagetool.AppImage \
+            AppDir dist/jar-to-dynamic-library-linux-x64.AppImage
+
+      - name: Package macOS disk image
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          APP="dist/JAR to Dynamic Library.app"
+          mkdir -p "$APP/Contents/MacOS/project" "$APP/Contents/Resources/app.iconset"
+          cp target/release/jar-to-dynamic-library-gui "$APP/Contents/MacOS/jar-to-dynamic-library-gui"
+          cp -R dist/project/. "$APP/Contents/MacOS/project/"
+          sips -z 16 16 assets/images/app-icon.png --out "$APP/Contents/Resources/app.iconset/icon_16x16.png"
+          sips -z 32 32 assets/images/app-icon.png --out "$APP/Contents/Resources/app.iconset/icon_16x16@2x.png"
+          sips -z 32 32 assets/images/app-icon.png --out "$APP/Contents/Resources/app.iconset/icon_32x32.png"
+          sips -z 64 64 assets/images/app-icon.png --out "$APP/Contents/Resources/app.iconset/icon_32x32@2x.png"
+          sips -z 128 128 assets/images/app-icon.png --out "$APP/Contents/Resources/app.iconset/icon_128x128.png"
+          sips -z 256 256 assets/images/app-icon.png --out "$APP/Contents/Resources/app.iconset/icon_128x128@2x.png"
+          sips -z 256 256 assets/images/app-icon.png --out "$APP/Contents/Resources/app.iconset/icon_256x256.png"
+          sips -z 512 512 assets/images/app-icon.png --out "$APP/Contents/Resources/app.iconset/icon_256x256@2x.png"
+          cp assets/images/app-icon.png "$APP/Contents/Resources/app.iconset/icon_512x512.png"
+          iconutil -c icns "$APP/Contents/Resources/app.iconset" -o "$APP/Contents/Resources/app.icns"
+          rm -r "$APP/Contents/Resources/app.iconset"
+          cat > "$APP/Contents/Info.plist" <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleExecutable</key>
+            <string>jar-to-dynamic-library-gui</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.jar-to-dynamic-library.gui</string>
+            <key>CFBundleName</key>
+            <string>JAR to Dynamic Library</string>
+            <key>CFBundleIconFile</key>
+            <string>app.icns</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>0.2.1</string>
+          </dict>
+          </plist>
+          EOF
+          hdiutil create -volname "JAR to Dynamic Library" -srcfolder "$APP" -ov -format UDZO \
+            "dist/jar-to-dynamic-library-${{ matrix.name }}.dmg"
+
+      - name: Upload desktop package
+        uses: actions/upload-artifact@v4
+        with:
+          name: jar-to-dynamic-library-${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14

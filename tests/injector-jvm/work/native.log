@@ -1,0 +1,13 @@
+WARNING: A JVM TI agent has been loaded dynamically (/home/donalp012/Descargas/jar-to-dynamic-library-2.0.0/target/release/libjar_to_dynamic_library.so)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+[JarToDynamicLibrary] Agent_OnAttach (dynamic attach to running JVM): options = jar=/home/donalp012/Descargas/jar-to-dynamic-library-2.0.0/tests/injector-jvm/work/examplemod.jar;session=test-native
+[JarToDynamicLibrary] Starting
+[JarToDynamicLibrary] Starting
+[JarToDynamicLibrary] JAR-driven injector: /home/donalp012/Descargas/jar-to-dynamic-library-2.0.0/tests/injector-jvm/work/examplemod.jar
+[JarToDynamicLibrary] JAR-driven injector: /home/donalp012/Descargas/jar-to-dynamic-library-2.0.0/tests/injector-jvm/work/examplemod.jar
+[JarToDynamicLibrary] Failed to define the injector class
+[JarToDynamicLibrary] Last error code: 2
+[JarToDynamicLibrary] JarInjector received /home/donalp012/Descargas/jar-to-dynamic-library-2.0.0/tests/injector-jvm/work/examplemod.jar; injection runs on its own thread
+[JTDL] JTDL|warn|entrypoint|example.ExamplePreLaunch.onPreLaunch() was recognized but skipped: preLaunch runs before the game starts, and this JVM is already running. Restart the game to run it safely.
+game exiting

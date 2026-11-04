@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "examplemod",
+  "version": "1.0.0",
+  "name": "Example Mod",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      { "value": "example.ExampleMod" }
+    ],
+    "client": [
+      "example.ExampleClient"
+    ],
+    "server": [
+      "example.ExampleServer"
+    ],
+    "preLaunch": [
+      "example.ExamplePreLaunch"
+    ],
+    "meteor": [
+      "example.ExampleMeteorAddon"
+    ]
+  },
+  "mixins": [
+    "examplemod.mixins.json"
+  ],
+  "jars": [
+    "META-INF/jars/nested-lib.jar"
+  ]
+}
